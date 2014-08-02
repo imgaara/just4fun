@@ -12,4 +12,7 @@ public abstract class Number<T extends Number<T>> {
     public abstract T mul(T rhs);
     public abstract T div(T rhs);
     public abstract boolean isGE(T rhs);
+    public abstract boolean isGT(T rhs);
+    public abstract boolean isAbsGE(T rhs);
+    public abstract boolean equals(T rhs);
 }
