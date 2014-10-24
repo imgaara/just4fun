@@ -74,6 +74,34 @@ public class Solution {
         }
     }
 
+    public String countAndSay(int n) {
+        StringBuilder s1 = new StringBuilder();
+        StringBuilder s2 = new StringBuilder();
+        s1.append("1");
+
+        while (n-- > 1) {
+            int k = 0;
+            for (int i = 0; i < s1.length() ; ) {
+                if (i != 0 && k != 0 && s1.charAt(i) != s1.charAt(i - 1)) {
+                    char num = s1.charAt(i-1);
+                    s2.append(k).append(num);
+                    k = 0;
+                } else {
+                    i++;
+                    k++;
+                }
+            }
+
+            s2.append(k).append(s1.charAt(s1.length() - 1));
+            StringBuilder temp = s1;
+            s1 = s2;
+            s2 = temp;
+            s2.delete(0, s2.length());
+        }
+
+        return s1.toString();
+    }
+
     private boolean isOut(Point p, int m, int n) {
         return p.i < 0 || p.i >= m || p.j < 0 || p.j >= n;
     }
@@ -83,5 +111,6 @@ public class Solution {
     }
 
     public static void main(String[] args) {
+        System.out.println(new Solution().countAndSay(4));
     }
 }
