@@ -68,18 +68,20 @@ public class Main {
             }
 
             T ret;
-            generator.infoDown(root);
+
             if (start <= root.start && end >= root.end) {
                 ret = root.value;
+                return ret;
+            }
+
+            generator.infoDown(root);
+            int mid = (root.start + root.end) >>> 1;
+            if (end <= mid) {
+                ret = findRangeValue_(root.left, start, end);
+            } else if (start > mid) {
+                ret = findRangeValue_(root.right, start, end);
             } else {
-                int mid = (root.start + root.end) >>> 1;
-                if (end <= mid) {
-                    ret = findRangeValue_(root.left, start, end);
-                } else if (start > mid) {
-                    ret = findRangeValue_(root.right, start, end);
-                } else {
-                    ret = generator.generate(findRangeValue_(root.left, start, mid), findRangeValue_(root.right, mid + 1, end));
-                }
+                ret = generator.generate(findRangeValue_(root.left, start, mid), findRangeValue_(root.right, mid + 1, end));
             }
             return ret;
         }
@@ -101,20 +103,21 @@ public class Main {
                 return;
             }
 
-            generator.infoDown(root);
+
             if (start <= root.start && end >= root.end) {
                 operator.operate(root);
                 return;
+            }
+
+            generator.infoDown(root);
+            int mid = (root.start + root.end) >>> 1;
+            if (end <= mid) {
+                operate_(root.left, start, end, operator);
+            } else if (start > mid) {
+                operate_(root.right, start, end, operator);
             } else {
-                int mid = (root.start + root.end) >>> 1;
-                if (end <= mid) {
-                    operate_(root.left, start, end, operator);
-                } else if (start > mid) {
-                    operate_(root.right, start, end, operator);
-                } else {
-                    operate_(root.left, start, mid, operator);
-                    operate_(root.right, mid + 1, end, operator);
-                }
+                operate_(root.left, start, mid, operator);
+                operate_(root.right, mid + 1, end, operator);
             }
 
             generator.infoUp(root);
@@ -134,16 +137,16 @@ public class Main {
     }
 
     static class AddOperator implements SegmentTree.Operator<SumEntry> {
-        private int addNum;
-        public void setAddNum(int addNum){
+        private long addNum;
+        public void setAddNum(long addNum){
             this.addNum = addNum;
         }
 
         @Override
         public void operate(SegmentTree.SegmentTreeNode<SumEntry> node) {
-            int add = node.value.size * addNum;
+            long add = node.value.size * addNum;
             node.value.sum += add;
-            node.value.extra += add;
+            node.value.extra += addNum;
         }
     }
 
@@ -158,13 +161,17 @@ public class Main {
 
         int[] start = new int[Q];
         int[] end = new int[Q];
-        int[] c = new int[Q];
+        long[] c = new long[Q];
+        boolean[] o = new boolean[Q];
         for (int i = 0; i < Q; ++i) {
             String token = ss.next();
             start[i] = ss.nextInt() - 1;
             end[i] = ss.nextInt() - 1;
             if ("C".equals(token)) {
-                c[i] = ss.nextInt();
+                c[i] = ss.nextLong();
+                o[i] = true;
+            } else {
+                o[i] = false;
             }
         }
 
@@ -190,13 +197,13 @@ public class Main {
                 }
 
                 if (root.start != root.end) {
-                    long add = root.value.extra / root.value.size;
+                    long add = root.value.extra;
                     long leftAdd = root.left.value.size * add;
                     long rightAdd = root.right.value.size * add;
 
-                    root.left.value.extra += leftAdd;
+                    root.left.value.extra += add;
                     root.left.value.sum += leftAdd;
-                    root.right.value.extra += rightAdd;
+                    root.right.value.extra += add;
                     root.right.value.sum += rightAdd;
                 }
                 root.value.extra = 0;
@@ -211,9 +218,11 @@ public class Main {
         long[] r = new long[Q];
         AddOperator addOperator = new AddOperator();
         for (int i = 0; i < Q; ++i) {
-            if (c[i] != 0) {
-                addOperator.setAddNum(c[i]);
-                sumTree.operate(start[i], end[i], addOperator);
+            if (o[i]) {
+                if (c[i] != 0) {
+                    addOperator.setAddNum(c[i]);
+                    sumTree.operate(start[i], end[i], addOperator);
+                }
             } else {
                 SumEntry p = sumTree.findRangeValue(start[i], end[i]);
                 r[i] = p.sum;
@@ -221,7 +230,7 @@ public class Main {
         }
 
         for (int i = 0; i < Q; ++i) {
-            if (r[i] == 0) {
+            if (o[i]) {
                 continue;
             }
             System.out.println(r[i]);

@@ -7,7 +7,7 @@ import java.util.Scanner;
 /**
  * Created by Administrator on 2014/10/23 0023.
  */
-public class SegmentTree<T> {
+public class SegmentTree<T, X> {
     public static class SegmentTreeNode<T> {
         int start;
         int end;
@@ -22,17 +22,20 @@ public class SegmentTree<T> {
         }
     }
 
-    public static abstract class SegmentTreeNodeValueGenerator<T> {
-        public abstract T generate(T left, T right);
+    public static interface SegmentTreeNodeValueGenerator<T, X> {
+        public T generate(T left, T right);
+        public void infoUp(SegmentTreeNode<T> root);
+        public void infoDown(SegmentTreeNode<T> root);
+        public T build(X one);
     }
 
-    public static <T> SegmentTreeNode<T> build(List<T> arry, SegmentTreeNodeValueGenerator<T> generator) {
+    public static <T, X> SegmentTreeNode<T> build(List<X> arry, SegmentTreeNodeValueGenerator<T, X> generator) {
         return innerBuild(arry, 0, arry.size() - 1, generator);
     }
 
-    private static <T> SegmentTreeNode<T> innerBuild(List<T> arry, int start, int end, SegmentTreeNodeValueGenerator<T> generator) {
+    private static <T, X> SegmentTreeNode<T> innerBuild(List<X> arry, int start, int end, SegmentTreeNodeValueGenerator<T, X> generator) {
         if (start == end) {
-            return new SegmentTreeNode<T>(start, end, generator.generate(arry.get(start), arry.get(end)));
+            return new SegmentTreeNode<T>(start, end, generator.build(arry.get(start)));
         }
 
         int mid = (start + end) >>> 1;
@@ -46,8 +49,8 @@ public class SegmentTree<T> {
     }
 
     private SegmentTreeNode<T> root;
-    private SegmentTreeNodeValueGenerator<T> generator;
-    public SegmentTree(List<T> arry, SegmentTreeNodeValueGenerator<T> generator) {
+    private SegmentTreeNodeValueGenerator<T, X> generator;
+    public SegmentTree(List<X> arry, SegmentTreeNodeValueGenerator<T, X> generator) {
         this.root = build(arry, generator);
         this.generator = generator;
     }
@@ -65,56 +68,60 @@ public class SegmentTree<T> {
             return null;
         }
 
+        T ret;
+
         if (start <= root.start && end >= root.end) {
-            return root.value;
+            ret = root.value;
+            return ret;
         }
 
+        generator.infoDown(root);
         int mid = (root.start + root.end) >>> 1;
         if (end <= mid) {
-            return findRangeValue_(root.left, start, end);
+            ret = findRangeValue_(root.left, start, end);
         } else if (start > mid) {
-            return findRangeValue_(root.right, start, end);
+            ret = findRangeValue_(root.right, start, end);
         } else {
-            return generator.generate(findRangeValue_(root.left, start, mid), findRangeValue_(root.right, mid + 1, end));
+            ret = generator.generate(findRangeValue_(root.left, start, mid), findRangeValue_(root.right, mid + 1, end));
         }
+        return ret;
     }
 
-    public static void main(String[] args) {
-        Scanner ss = new Scanner(System.in);
-        int N = ss.nextInt();
-        int Q = ss.nextInt();
-        List<Integer> list = new ArrayList<Integer>();
-        for (int i = 0; i < N; ++i) {
-            list.add(ss.nextInt());
-        }
-
-        int[] start = new int[Q];
-        int[] end = new int[Q];
-        for (int i = 0; i < Q; ++i) {
-            start[i] = ss.nextInt() - 1;
-            end[i] = ss.nextInt() - 1;
-        }
-
-        ss.close();
-
-        SegmentTree<Integer> minTree = new SegmentTree<Integer>(list, new SegmentTreeNodeValueGenerator<Integer>() {
-            @Override
-            public Integer generate(Integer left, Integer right) {
-                return Math.min(left, right);
-            }
-        });
-
-        SegmentTree<Integer> maxTree = new SegmentTree<Integer>(list, new SegmentTreeNodeValueGenerator<Integer>() {
-            @Override
-            public Integer generate(Integer left, Integer right) {
-                return Math.max(left, right);
-            }
-        });
-
-        for (int i = 0; i < Q; ++i) {
-            int max = maxTree.findRangeValue(start[i], end[i]);
-            int min =  minTree.findRangeValue(start[i], end[i]);
-            System.out.println(max - min);
-        }
+    public static interface Operator<T> {
+        public void operate(SegmentTreeNode<T> node);
     }
+
+    public void operate(int start, int end, Operator<T> operator) {
+        operate_(root, start, end, operator);
+    }
+
+    private void operate_(SegmentTreeNode<T> root, int start, int end, Operator<T> operator) {
+        if (null == root) {
+            return;
+        }
+
+        if (start > root.end || end < root.start) {
+            return;
+        }
+
+
+        if (start <= root.start && end >= root.end) {
+            operator.operate(root);
+            return;
+        }
+
+        generator.infoDown(root);
+        int mid = (root.start + root.end) >>> 1;
+        if (end <= mid) {
+            operate_(root.left, start, end, operator);
+        } else if (start > mid) {
+            operate_(root.right, start, end, operator);
+        } else {
+            operate_(root.left, start, mid, operator);
+            operate_(root.right, mid + 1, end, operator);
+        }
+
+        generator.infoUp(root);
+    }
+
 }
